@@ -32,6 +32,7 @@ mongoose.connect(database, { useNewUrlParser: true, useUnifiedTopology: true, us
 const typeDefs = gql`
 
   type User {
+    id: String!
     name: String!
     username: String!
     email: String!
@@ -39,6 +40,10 @@ const typeDefs = gql`
 
   type Token {
     value: String!
+  }
+
+  type Response {
+    response: String!
   }
 
   type Query {
@@ -58,6 +63,10 @@ const typeDefs = gql`
       username: String!
       password: String!
     ): Token
+
+    deleteUser(
+      id: String
+    ): Response
 
   }
 `
@@ -116,6 +125,24 @@ const resolvers = {
         return {
           value: jwt.sign(tokenForUser, JWT_SECRET)
         }
+      }
+    },
+
+    deleteUser: async (root, args, context) => {
+
+      const loggedUserID = context.currentUserLogged.id;
+      const loggedUserName = context.currentUserLogged.name;
+
+      const findCurrentUserID = await Users.findOne({ _id: args.id });
+
+      if (loggedUserID === args.id && findCurrentUserID) {
+        await Users.findByIdAndRemove(args.id).exec();
+
+        return {
+          response: `You successfully deleted your account from app. Thank you ${loggedUserName} for using our app and we hope you come back again some day! <3`
+        }
+      } else {
+        throw new UserInputError('You tried to delete user, which does not exist on database or you are not authorized to do so. Please try again!');
       }
     }
   }
