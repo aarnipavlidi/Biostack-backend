@@ -4,8 +4,6 @@
 require('dotenv').config() // Sovellus ottaa käyttöön "dotenv" kirjaston, jotta voidaan tuoda erilaisia muuttujia => ".env" tiedostosta.
 const { ApolloServer, UserInputError, gql } = require('apollo-server') // Alustetaan muuttujat "ApolloServer", "UserInputError" sekä "gql", jotka hyödyntävät "apollo-server":in kirjastoa sovelluksessa.
 
-const { AuthenticationError, ForbiddenError } = require('apollo-server-express');
-
 const mongoose = require('mongoose') // Alustetetaan muuttuja "mongoose", joka ottaa käyttöönsä "mongoose" nimisen kirjaston sovellusta varten.
 const { v4: uuid } = require('uuid') // Alustetaan muuttuja "uuid", joka hyödyntää "uuid" nimistä kirjastoa. Tämän avulla voidaan lisätä "random" id:n arvo, kun esim. halutaan lisätä uusi arvo tietokantaan.
 
@@ -60,6 +58,7 @@ const typeDefs = gql`
       username: String!
       password: String!
     ): Token
+
   }
 `
 
@@ -67,7 +66,10 @@ const typeDefs = gql`
 // Lisää tästä löytyy: https://www.apollographql.com/docs/apollo-server/data/resolvers/#resolver-map
 const resolvers = {
   Query: {
-    // Kun suoritetaan "authorsCount" query niin sovellus laskee, että kuinka monta arvoa on yhteensä "authors" kokoelmassa ja palauttaa yhteenlasketun arvon takaisin käyttäjälle.
+
+    me: (root, args, context) => {
+      return context.currentUserLogged
+    }
   },
 
   Mutation: {
@@ -124,6 +126,19 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  context: async ({ req }) => {
+
+    const auth = req ? req.headers.authorization : null;
+
+    if (auth && auth.toLowerCase().startsWith('bearer ')) {
+      const decodedToken = jwt.verify(auth.substring(7), JWT_SECRET);
+      const currentUserLogged = await Users.findById(decodedToken.id);
+
+      return {
+        currentUserLogged
+      }
+    }
+  }
 })
 
 server.listen().then(({ url }) => { // Luo serverin portille 4000, jonka jälkeen tulostaa terminaaliin alla olevan tekstin takaisin käyttäjälle näkyviin.
