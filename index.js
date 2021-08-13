@@ -3,11 +3,16 @@
 
 require('dotenv').config() // Sovellus ottaa käyttöön "dotenv" kirjaston, jotta voidaan tuoda erilaisia muuttujia => ".env" tiedostosta.
 const { ApolloServer, UserInputError, gql } = require('apollo-server') // Alustetaan muuttujat "ApolloServer", "UserInputError" sekä "gql", jotka hyödyntävät "apollo-server":in kirjastoa sovelluksessa.
-//const { ApolloServerPluginLandingPageProductionDefault, ApolloServerPluginLandingPageLocalDefault } = require('apollo-server-core');
+
+const { AuthenticationError, ForbiddenError } = require('apollo-server-express');
+
 const mongoose = require('mongoose') // Alustetetaan muuttuja "mongoose", joka ottaa käyttöönsä "mongoose" nimisen kirjaston sovellusta varten.
 const { v4: uuid } = require('uuid') // Alustetaan muuttuja "uuid", joka hyödyntää "uuid" nimistä kirjastoa. Tämän avulla voidaan lisätä "random" id:n arvo, kun esim. halutaan lisätä uusi arvo tietokantaan.
 
-const Authors = require('./models/authors') // Alustetaan muuttuja "Authors", joka ottaa käyttöön "authors.js" tiedoston sisällön sovellusta varten.
+const Users = require('./models/users') // Alustetaan muuttuja "Authors", joka ottaa käyttöön "authors.js" tiedoston sisällön sovellusta varten.
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.SECRET_KEY
 
 // Alustetaan muuttuja "database", joka on yhtä kuin kyseisen muuttujan arvo eli,
 // "MONGODB_URI". Muista, että olemme erikseen luoneet ".env" nimisen tiedoston
@@ -24,39 +29,37 @@ mongoose.connect(database, { useNewUrlParser: true, useUnifiedTopology: true, us
     console.log('There was a problem while trying connect to the MongoDB! Error was following:', error.message) // Tulostetaan kyseinen arvo takaisin konsoliin näkyviin.
   })
 
-let authors = [ // Alustetaan muuttuja "authors", joka saa käyttöönsä [...] sisällä olevan taulukon arvot.
-  {
-    name: 'Robert Martin',
-    id: "afa51ab0-344d-11e9-a414-719c6709cf3e",
-    born: 1952,
-  },
-  {
-    name: 'Martin Fowler',
-    id: "afa5b6f0-344d-11e9-a414-719c6709cf3e",
-    born: 1963
-  },
-]
 
 // Alustetaan muuttuja "typeDefs", joka sisältää sovelluksen käyttämän GraphQL-skeeman. Lisää tästä löytyy: https://graphql.org/learn/schema/
 const typeDefs = gql`
-  type Author {
+
+  type User {
     name: String!
-    born: Int!
-    id: ID!
+    username: String!
+    email: String!
   }
-  type AuthorNameWithBookCount {
-    name: String!
-    born: Int!
-    bookCount: Int!
+
+  type Token {
+    value: String!
   }
+
   type Query {
-    authorsCount: Int!
+    me: User
   }
+
   type Mutation {
-    addAuthor(
+
+    createUser(
       name: String!
-      born: Int!
-    ): Author
+      username: String!
+      password: String!
+      email: String!
+    ): User
+
+    login(
+      username: String!
+      password: String!
+    ): Token
   }
 `
 
@@ -65,45 +68,56 @@ const typeDefs = gql`
 const resolvers = {
   Query: {
     // Kun suoritetaan "authorsCount" query niin sovellus laskee, että kuinka monta arvoa on yhteensä "authors" kokoelmassa ja palauttaa yhteenlasketun arvon takaisin käyttäjälle.
-    authorsCount: () => Authors.collection.countDocuments(), // Lisää funktiosta: https://docs.mongodb.com/manual/reference/method/db.collection.countDocuments/
   },
 
   Mutation: {
-    // Tehtävää "8.13: Tietokanta, osa 1" varten pitää luoda myös "addAuthor" mutaatio,
-    // jotta voimme lisätä uuden kirjan tietokantaan. Tämä johtuu siitä, koska olemme
-    // luoneet kirjojen rakenteelle ("models/books.js") seuraavan kohdan:
-    //    author: {
-    //      type: mongoose.Schema.Types.ObjectId,
-    //      ref: 'Author'
-    //    }
-    // Tämä siis tarkoittaa sitä, että "author" objektille pitää löytyä jo entuudestaan
-    // oleva kirjailijan arvo tietokannasta eli "authors" kokoelmasta. Kun uusi kirjailija
-    // on lisätty talteen tietokantaan, niin kyseisen arvon id:n objektin avulla pystytään
-    // rakentamaan (ref: 'Author') yhteys kahden (2) eri kokoelman välillä.
+    createUser: async (root, args) => {
 
-    // Alustetaan "addAuthor" mutaatio, jonka tarkoituksena on lisätä aina uusi kirjailija
-    // tietokantaan talteen, kun kyseiseen funktioon tehdään viittaus.
-    addAuthor: async (root, args) => {
-      // Alustetaan muuttuja "newAuthor", joka on yhtä kuin kyseinen funktio. Muuttuja
-      // siis sijoittaa parametrin kautta tulevan "args" muuttujan datan eteenpäin =>
-      // "Authors" muuttujaan, joka noudattaa kyseisen muuttujan rakennetta.
-      const newAuthor = new Authors({ ...args })
+      const hashedPassword = await bcrypt.hash(args.password, 10);
 
-      // Sovellus ensin yrittää suorittaa => "try {...}" sisällä olevat asiat, jos
-      // sen aikana tulee virheitä, niin suoritetaan => "catch" funktio.
+      const newUser = new Users({
+        name: args.name,
+        username: args.username,
+        password: hashedPassword,
+        email: args.email
+      });
+
       try {
-        await newAuthor.save() // Tallennetaan "newAuthor" muuttujan data tietokantaan.
-        return newAuthor // Kun mutaatio on suoritettu, niin funktio palauttaa takaisin "newAuthor" muuttujan datan käyttäjälle näkyviin.
-      } catch (error) { // Jos mutaation suorittamisessa tulee virheitä, niin suoritetaan {...} sisällä olevat asiat.
-        console.log(error.message) // Tulostaa terminaaliin myös näkyviin virheen arvon eli "error.message".
+        await newUser.save()
+        return newUser
+      } catch (error) {
+        console.log(error.message)
         throw new UserInputError(error.message, {
-          invalidArg: args,
+          invalidArgs: args,
         })
+      }
+    },
+
+    login: async (root, args) => {
+
+      const findCurrentUsername = await Users.findOne({ username: args.username });
+
+      if (!findCurrentUsername) {
+        throw new UserInputError('You tried to login with wrong credentials. Please try again!');
+      }
+
+      const checkPasswordMatch = await bcrypt.compare(args.password, findCurrentUsername.password);
+
+      if (!checkPasswordMatch) {
+        throw new UserInputError('You tried to login with wrong credentials. Please try again!');
+      } else {
+        const tokenForUser = {
+          username: findCurrentUsername.username,
+          id: findCurrentUsername._id
+        };
+
+        return {
+          value: jwt.sign(tokenForUser, JWT_SECRET)
+        }
       }
     }
   }
 }
-
 
 // Alustetaan muuttuja "server", joka suorittaa kyseisen funktion, jossa
 // käytetään parametreinä "typeDefs" sekä "resolvers" muuttujia.
