@@ -8,8 +8,11 @@ const mongoose = require('mongoose') // Alustetetaan muuttuja "mongoose", joka o
 const { v4: uuid } = require('uuid') // Alustetaan muuttuja "uuid", joka hyödyntää "uuid" nimistä kirjastoa. Tämän avulla voidaan lisätä "random" id:n arvo, kun esim. halutaan lisätä uusi arvo tietokantaan.
 
 const Users = require('./models/users') // Alustetaan muuttuja "Authors", joka ottaa käyttöön "authors.js" tiedoston sisällön sovellusta varten.
+const Products = require('./models/products')
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const products = require('./models/products')
 const JWT_SECRET = process.env.SECRET_KEY
 
 // Alustetaan muuttuja "database", joka on yhtä kuin kyseisen muuttujan arvo eli,
@@ -32,10 +35,21 @@ mongoose.connect(database, { useNewUrlParser: true, useUnifiedTopology: true, us
 const typeDefs = gql`
 
   type User {
-    id: String!
+    id: ID!
     name: String!
     username: String!
     email: String!
+    rating: Int
+    products: [Product!]
+  }
+
+  type Product {
+    id: ID!
+    productTitle: String!
+    productDescription: String!
+    productPrice: Int!
+    productGroupName: String!
+    owner: User!
   }
 
   type Token {
@@ -47,6 +61,8 @@ const typeDefs = gql`
   }
 
   type Query {
+    showAllUsers: [User!]!
+    showAllProducts: [Product!]!
     me: User
   }
 
@@ -57,7 +73,16 @@ const typeDefs = gql`
       username: String!
       password: String!
       email: String!
-    ): User
+      rating: Int
+    ): User!
+
+    createProduct(
+      productTitle: String!
+      productDescription: String!
+      productPrice: Int!
+      productGroupName: String!
+      owner: String!
+    ): Product!
 
     login(
       username: String!
@@ -65,17 +90,64 @@ const typeDefs = gql`
     ): Token
 
     deleteUser(
-      id: String
+      id: String!
     ): Response
 
   }
 `
 
+const relationProducts = async (productID) => {
+  try {
+    const products = await Products.find({_id: { $in: productID }})
+    return products.map(results => ({
+      ...results._doc,
+      owner: relationUsers.bind(this, resuls._doc.owner)
+    }))
+  } catch (error) {
+    throw error
+  }
+};
+
+const relationUsers = async (userID) => {
+  try {
+    const users = await Users.findById(userID)
+    return {
+      ...users._doc,
+      products: relationProducts.bind(this, users._doc.products)
+    }
+  } catch (error) {
+    throw error
+  }
+};
+
 // Alustetaan muuttuja "resolvers", joka sisältää palvelimen "resolverit". Tämän avulla määritellään, että miten GraphQL-kyselyihin vastataan.
 // Lisää tästä löytyy: https://www.apollographql.com/docs/apollo-server/data/resolvers/#resolver-map
 const resolvers = {
+
   Query: {
 
+    showAllUsers: async () => {
+      try {
+        const findAllUsers = await Users.find()
+        return findAllUsers.map(results => ({
+          ...results._doc,
+          products: relationProducts.bind(this, results._doc.products)
+        }))
+      } catch (error) {
+        throw error
+      }
+    },
+
+    showAllProducts: async () => {
+      try {
+        const findAllProducts = await Products.find()
+        return findAllProducts.map(results => ({
+          owner: relationUsers.bind(this, results._doc.owner)
+        }))
+      } catch (error) {
+        throw error
+      }
+    },
     me: (root, args, context) => {
       return context.currentUserLogged
     }
@@ -90,7 +162,8 @@ const resolvers = {
         name: args.name,
         username: args.username,
         password: hashedPassword,
-        email: args.email
+        email: args.email,
+        rating: args.rating
       });
 
       try {
@@ -101,6 +174,32 @@ const resolvers = {
         throw new UserInputError(error.message, {
           invalidArgs: args,
         })
+      }
+    },
+
+    createProduct: async (root, args) => {
+
+      const newProduct = new Products({
+        productTitle: args.productTitle,
+        productDescription: args.productDescription,
+        productPrice: args.productPrice,
+        productGroupName: args.productGroupName,
+        owner: args.owner
+      });
+
+      try {
+        const savedNewProduct = await newProduct.save()
+        const userRecord = await Users.findById(args.owner)
+
+        userRecord.showAllProducts.push(newProduct)
+        await userRecord.save()
+        
+        return {
+          ...savedNewProduct._doc,
+          owner: relationUsers.bind(this, args.owner)
+        }
+      } catch (error) {
+        throw error
       }
     },
 

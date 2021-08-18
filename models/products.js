@@ -1,39 +1,35 @@
 // This exercise has been commented by Aarni Pavlidi, if you have any questions or suggestions with the code,
 // then please contact me by sending email at me@aarnipavlidi.fi <3
 
-const mongoose = require('mongoose')
+const mongoose = require('mongoose') 
 const uniqueValidator = require('mongoose-unique-validator')
 
+
 const schema = new mongoose.Schema({
-  name: {
+  productTitle: {
+    type: String,
+    required: true,
+    minlength: 5
+  },
+  productDescription: {
+    type: String,
+    required: true,
+    minlength: 5
+  },
+  productPrice: {
+    type: Number,
+    required: true,
+    minlength: 1
+  },
+  productGroupName: {
     type: String,
     required: true
   },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    minlength: 5
-  },
-  password: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    minlength: 5
-  },
-  rating: {
-    type: Number
-  },
-  products: [{
+  owner: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Products'
-  }]
+    ref: 'Users'
+  },
 })
 
 schema.plugin(uniqueValidator)
-
-module.exports = mongoose.model('Users', schema)
+module.exports = mongoose.model('Products', schema)
