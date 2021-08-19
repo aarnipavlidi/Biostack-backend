@@ -1,7 +1,7 @@
 // This exercise has been commented by Aarni Pavlidi, if you have any questions or suggestions with the code,
 // then please contact me by sending email at me@aarnipavlidi.fi <3
 
-const mongoose = require('mongoose') 
+const mongoose = require('mongoose')
 const uniqueValidator = require('mongoose-unique-validator')
 
 
