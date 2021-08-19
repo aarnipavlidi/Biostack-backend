@@ -34,6 +34,12 @@ mongoose.connect(database, { useNewUrlParser: true, useUnifiedTopology: true, us
 // Alustetaan muuttuja "typeDefs", joka sisältää sovelluksen käyttämän GraphQL-skeeman. Lisää tästä löytyy: https://graphql.org/learn/schema/
 const typeDefs = gql`
 
+  type Query {
+    showAllUsers: [User!]!
+    showAllProducts: [Product!]!
+    me: User
+  }
+
   type User {
     _id: ID!
     name: String!
@@ -58,12 +64,6 @@ const typeDefs = gql`
 
   type Response {
     response: String!
-  }
-
-  type Query {
-    showAllUsers: [User!]!
-    showAllProducts: [Product!]!
-    me: User
   }
 
   type Mutation {
@@ -96,10 +96,10 @@ const typeDefs = gql`
   }
 `
 
-const productsRelation = async (productID) => {
+const productsRelation = async (getProductID) => {
   try {
-    const currentProduct = await Products.find({_id: { $in: productID }})
-    return currentProduct.map(results => ({
+    const findProducts = await Products.find({_id: { $in: getProductID }})
+    return findProducts.map(results => ({
       ...results._doc,
       owner: usersRelation.bind(this, results._doc.owner)
     }))
@@ -108,12 +108,12 @@ const productsRelation = async (productID) => {
   }
 };
 
-const usersRelation = async (userID) => {
+const usersRelation = async (getUserID) => {
   try {
-    const currentUser = await Users.findById(userID)
+    const findUsers = await Users.findById(getUserID)
     return {
-      ...currentUser._doc,
-      products: productsRelation.bind(this, currentUser._doc.products)
+      ...findUsers._doc,
+      products: productsRelation.bind(this, findUsers._doc.products)
     }
   } catch (error) {
     throw error
@@ -123,29 +123,27 @@ const usersRelation = async (userID) => {
 // Alustetaan muuttuja "resolvers", joka sisältää palvelimen "resolverit". Tämän avulla määritellään, että miten GraphQL-kyselyihin vastataan.
 // Lisää tästä löytyy: https://www.apollographql.com/docs/apollo-server/data/resolvers/#resolver-map
 const resolvers = {
-
   Query: {
-
     showAllUsers: async () => {
       try {
-        const findAllUsers = await Users.find()
-        return findAllUsers.map(results => ({
+        const getAllUsers = await Users.find()
+        return getAllUsers.map(results => ({
           ...results._doc,
           products: productsRelation.bind(this, results._doc.products)
         }))
-      } catch (error) {
-        throw error
+      } catch (err) {
+        throw err
       }
     },
-
     showAllProducts: async () => {
       try {
-        const findAllProducts = await Products.find()
-        return findAllProducts.map(results => ({
+        const getAllProducts = await Products.find()
+        return getAllProducts.map(results => ({
+          ...results._doc,
           owner: usersRelation.bind(this, results._doc.owner)
         }))
-      } catch (error) {
-        throw error
+      } catch (err) {
+        throw err
       }
     },
     me: (root, args, context) => {
@@ -154,54 +152,31 @@ const resolvers = {
   },
 
   Mutation: {
-    createUser: async (root, args) => {
-
-      const hashedPassword = await bcrypt.hash(args.password, 10);
-
-      const newUser = new Users({
-        name: args.name,
-        username: args.username,
-        password: hashedPassword,
-        email: args.email,
-        rating: args.rating
-      });
-
+    createUser: async (_, { name, username, password, email }) => {
       try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new Users({ name, username, password: hashedPassword, email })
         await newUser.save()
-        return newUser
+        return newUser;
       } catch (error) {
-        console.log(error.message)
-        throw new UserInputError(error.message, {
-          invalidArgs: args,
-        })
+        throw error
       }
     },
+    createProduct: async (_, { productTitle, productDescription, productPrice, productGroupName, owner: currentUserID }) => {
 
-    createProduct: async (root, args, context) => {
+      const newProduct = new Products({ productTitle, productDescription, productPrice, productGroupName, owner: currentUserID })
 
-      const getCurrentUser = await Users.findById(args.owner)
-      const loggedUserID = context.currentUserLogged ? context.currentUserLogged.id : null;
-
-      const newProduct = new Products({
-        productTitle: args.productTitle,
-        productDescription: args.productDescription,
-        productPrice: args.productPrice,
-        productGroupName: args.productGroupName,
-        owner: args.owner
-      });
-
-      if (loggedUserID === args.owner && getCurrentUser) {
-        const savedNewProduct = await newProduct.save()
-
-        getCurrentUser.products.push(newProduct)
-        await getCurrentUser.save()
-
+      try {
+        const savedProduct = await newProduct.save()
+        const currentUserData = await Users.findById(currentUserID)
+        currentUserData.products.push(newProduct)
+        await currentUserData.save()
         return {
-          ...savedNewProduct._doc,
-          owner: usersRelation.bind(this, args.owner)
+          ...savedProduct._doc,
+          owner: usersRelation.bind(this, currentUserID)
         }
-      } else {
-        throw new UserInputError('You are not authorized to add new product to the database!')
+      } catch (error) {
+        throw error
       }
     },
 
