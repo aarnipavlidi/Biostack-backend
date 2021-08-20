@@ -219,10 +219,15 @@ const resolvers = {
       const loggedUserID = context.currentUserLogged.id;
       const loggedUserName = context.currentUserLogged.name;
 
+       const objects = [
+        mongoose.Types.ObjectId(loggedUserID)
+      ];
+
       const findCurrentUserID = await Users.findOne({ _id: args.id });
 
       if (loggedUserID === args.id && findCurrentUserID) {
         await Users.findByIdAndRemove(args.id).exec();
+        await Products.collection.deleteMany({ owner: { $in: objects }});
 
         return {
           response: `You successfully deleted your account from app. Thank you ${loggedUserName} for using our app and we hope you come back again some day! <3`
