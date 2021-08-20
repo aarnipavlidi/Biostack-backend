@@ -45,7 +45,7 @@ const typeDefs = gql`
     name: String!
     username: String!
     email: String!
-    rating: Int
+    rating: String
     products: [Product!]
   }
 
@@ -53,7 +53,7 @@ const typeDefs = gql`
     _id: ID!
     productTitle: String!
     productDescription: String!
-    productPrice: Int!
+    productPrice: String!
     productGroupName: String!
     owner: User!
   }
@@ -73,13 +73,13 @@ const typeDefs = gql`
       username: String!
       password: String!
       email: String!
-      rating: Int
+      rating: String
     ): User!
 
     createProduct(
       productTitle: String!
       productDescription: String!
-      productPrice: Int!
+      productPrice: String!
       productGroupName: String!
       owner: String!
     ): Product!
@@ -131,8 +131,8 @@ const resolvers = {
           ...results._doc,
           products: productsRelation.bind(this, results._doc.products)
         }))
-      } catch (err) {
-        throw err
+      } catch (error) {
+        throw error
       }
     },
     showAllProducts: async () => {
@@ -142,13 +142,23 @@ const resolvers = {
           ...results._doc,
           owner: usersRelation.bind(this, results._doc.owner)
         }))
-      } catch (err) {
-        throw err
+      } catch (error) {
+        throw error
       }
     },
-    me: (root, args, context) => {
-      return context.currentUserLogged
-    }
+
+    me: async (root, args, context) => {
+      
+      try {
+        const currentUserData = await Users.findById(context.currentUserLogged.id);
+        return {
+          ...currentUserData._doc,
+          products: productsRelation.bind(this, currentUserData._doc.products)
+        }
+      } catch (error) {
+        throw error
+      }
+    },
   },
 
   Mutation: {

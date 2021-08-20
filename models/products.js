@@ -17,7 +17,7 @@ const schema = new mongoose.Schema({
     minlength: 5
   },
   productPrice: {
-    type: Number,
+    type: String,
     required: true,
     minlength: 1
   },

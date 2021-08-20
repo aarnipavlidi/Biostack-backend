@@ -26,7 +26,7 @@ const schema = new mongoose.Schema({
     minlength: 5
   },
   rating: {
-    type: Number
+    type: String
   },
   products: [{
     type: mongoose.Schema.Types.ObjectId,
