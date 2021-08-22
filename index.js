@@ -53,6 +53,7 @@ const typeDefs = gql`
     _id: ID!
     productTitle: String!
     productDescription: String!
+    productSize: String!
     productPrice: String!
     productGroupName: String!
     owner: User!
@@ -79,6 +80,7 @@ const typeDefs = gql`
     createProduct(
       productTitle: String!
       productDescription: String!
+      productSize: String!
       productPrice: String!
       productGroupName: String!
       owner: String!
@@ -172,9 +174,9 @@ const resolvers = {
         throw error
       }
     },
-    createProduct: async (_, { productTitle, productDescription, productPrice, productGroupName, owner: currentUserID }) => {
+    createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID }) => {
 
-      const newProduct = new Products({ productTitle, productDescription, productPrice, productGroupName, owner: currentUserID })
+      const newProduct = new Products({ productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID })
 
       try {
         const savedProduct = await newProduct.save()
@@ -226,8 +228,8 @@ const resolvers = {
       const findCurrentUserID = await Users.findOne({ _id: args.id });
 
       if (loggedUserID === args.id && findCurrentUserID) {
-        await Users.findByIdAndRemove(args.id).exec();
         await Products.collection.deleteMany({ owner: { $in: objects }});
+        await Users.findByIdAndRemove(args.id).exec();
 
         return {
           response: `You successfully deleted your account from app. Thank you ${loggedUserName} for using our app and we hope you come back again some day! <3`

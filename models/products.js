@@ -16,6 +16,11 @@ const schema = new mongoose.Schema({
     required: true,
     minlength: 5
   },
+  productSize: {
+    type: String,
+    required: true,
+    maxlength: 3
+  },
   productPrice: {
     type: String,
     required: true,
