@@ -86,6 +86,10 @@ const typeDefs = gql`
       owner: String!
     ): Product!
 
+    deleteProduct(
+      currentProductID: String!
+    ): Response
+
     login(
       username: String!
       password: String!
@@ -189,6 +193,23 @@ const resolvers = {
         }
       } catch (error) {
         throw error
+      }
+    },
+
+    deleteProduct: async (root, args, context) => {
+
+      const loggedUserID = context.currentUserLogged.id;
+      const findCurrentProduct = await Products.findById(args.currentProductID);
+      console.log(findCurrentProduct);
+
+      if (findCurrentProduct) {
+        await Products.collection.deleteOne({ "_id": mongoose.Types.ObjectId(args.currentProductID) });
+
+        return {
+          response: `You have successfully deleted your product called ${findCurrentProduct.productTitle} from the app!`
+        }
+      } else {
+        throw new UserInputError('You are either not authorized to delete current item from the app or it has been already deleted!');
       }
     },
 
