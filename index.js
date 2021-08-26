@@ -37,6 +37,7 @@ const typeDefs = gql`
   type Query {
     showAllUsers: [User!]!
     showAllProducts: [Product!]!
+    showCurrentProduct(productID: String): Product!
     me: User
   }
 
@@ -153,10 +154,22 @@ const resolvers = {
       }
     },
 
+    showCurrentProduct: async (_, { productID }) => {
+      try {
+        const getCurrentProduct = await Products.findById(productID)
+        return {
+          ...getCurrentProduct._doc,
+          owner: usersRelation.bind(this, getCurrentProduct._doc.owner)
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+
     me: async (root, args, context) => {
       
       try {
-        const currentUserData = await Users.findById(context.currentUserLogged.id);
+        const currentUserData = await Users.findById(context.currentUserLogged.id)
         return {
           ...currentUserData._doc,
           products: productsRelation.bind(this, currentUserData._doc.products)
@@ -200,13 +213,12 @@ const resolvers = {
 
       const loggedUserID = context.currentUserLogged.id;
       const findCurrentProduct = await Products.findById(args.currentProductID);
-      console.log(findCurrentProduct);
 
-      if (findCurrentProduct) {
-        await Products.collection.deleteOne({ "_id": mongoose.Types.ObjectId(args.currentProductID) });
+      if (findCurrentProduct && loggedUserID === mongoose.Types.ObjectId(findCurrentProduct.owner)) {
+        await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(args.currentProductID)});
 
         return {
-          response: `You have successfully deleted your product called ${findCurrentProduct.productTitle} from the app!`
+          response: `You have successfully deleted your product called "${findCurrentProduct.productTitle}" from the app!`
         }
       } else {
         throw new UserInputError('You are either not authorized to delete current item from the app or it has been already deleted!');
