@@ -211,10 +211,15 @@ const resolvers = {
 
     deleteProduct: async (root, args, context) => {
 
-      const loggedUserID = context.currentUserLogged.id;
+      const loggedUserID = await context.currentUserLogged._id;
       const findCurrentProduct = await Products.findById(args.currentProductID);
 
-      if (findCurrentProduct && loggedUserID === mongoose.Types.ObjectId(findCurrentProduct.owner)) {
+      // Fixed earlier problem, the reason why logged user could not delete item from the app,
+      // was because "context" variable returns "_id" object and that value is not string. So
+      // had to improvise a little bit and make sure that both variables => "loggedUserID" and
+      // "findCurrentProduct.owner" are strings, so we are able to compare if they are equal or
+      // not. Previously they always were not equal (false) and hence if-condition always failed.
+      if (findCurrentProduct && String(loggedUserID) === String(mongoose.Types.ObjectId(findCurrentProduct.owner))) {
         await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(args.currentProductID)});
 
         return {
