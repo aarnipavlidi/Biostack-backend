@@ -9,6 +9,7 @@ const { v4: uuid } = require('uuid') // Alustetaan muuttuja "uuid", joka hyödyn
 
 const Users = require('./models/users') // Alustetaan muuttuja "Authors", joka ottaa käyttöön "authors.js" tiedoston sisällön sovellusta varten.
 const Products = require('./models/products')
+const Transactions = require('./models/transactions')
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -48,6 +49,7 @@ const typeDefs = gql`
     email: String!
     rating: String
     products: [Product!]
+    transactions: [Transaction!]
   }
 
   type Product {
@@ -58,6 +60,20 @@ const typeDefs = gql`
     productPrice: String!
     productGroupName: String!
     owner: User!
+  }
+
+  type Transaction {
+    _id: ID!
+    date: String!
+    type: String!
+    productID: String!
+    productTitle: String!
+    productSize: String!
+    productPrice: String!
+    productGroupName: String!
+    ownerID: String!
+    ownerName: String!
+    ownerEmail: String!
   }
 
   type Token {
@@ -87,6 +103,18 @@ const typeDefs = gql`
       owner: String!
     ): Product!
 
+    createTransaction(
+      date: String!
+      productID: String!
+      productTitle: String!
+      productSize: String!
+      productPrice: String!
+      productGroupName: String!
+      ownerID: String!
+      ownerName: String!
+      ownerEmail: String!
+    ): Transaction!
+
     deleteProduct(
       currentProductID: String!
     ): Response
@@ -102,6 +130,17 @@ const typeDefs = gql`
 
   }
 `
+
+const transactionsRelation = async (getTransactionID) => {
+  try {
+    const findTransactions = await Transactions.find({_id: { $in: getTransactionID }})
+    return findTransactions.map(results => ({
+      ...results._doc,
+    }))
+  } catch (error) {
+    throw error
+  }
+};
 
 const productsRelation = async (getProductID) => {
   try {
@@ -167,12 +206,12 @@ const resolvers = {
     },
 
     me: async (root, args, context) => {
-      
       try {
         const currentUserData = await Users.findById(context.currentUserLogged.id)
         return {
           ...currentUserData._doc,
-          products: productsRelation.bind(this, currentUserData._doc.products)
+          products: productsRelation.bind(this, currentUserData._doc.products),
+          transactions: transactionsRelation.bind(this, currentUserData._doc.transactions)
         }
       } catch (error) {
         throw error
@@ -203,6 +242,36 @@ const resolvers = {
         return {
           ...savedProduct._doc,
           owner: usersRelation.bind(this, currentUserID)
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail }, context) => {
+
+      const loggedUserID = await context.currentUserLogged._id;
+      console.log(loggedUserID);
+
+      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail })
+      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail })
+
+      try {
+        const saveTransactionBuyer = await transactionBuyer.save()
+        const saveTransactionSeller = await transactionSeller.save()
+
+        const getBuyerData = await Users.findById(String(loggedUserID))
+        getBuyerData.transactions.push(transactionBuyer)
+        await getBuyerData.save()
+
+        const getSellerData = await Users.findById(ownerID)
+        getSellerData.transactions.push(transactionSeller)
+        await getSellerData.save()
+
+        await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(productID)})
+
+        return {
+          ...saveTransactionBuyer._doc
         }
       } catch (error) {
         throw error
