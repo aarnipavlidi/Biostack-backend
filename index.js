@@ -248,23 +248,28 @@ const resolvers = {
       }
     },
 
-    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail }, context) => {
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail }, context) => {
 
       const loggedUserID = await context.currentUserLogged._id;
-      console.log(loggedUserID);
+      const loggedUserName = await context.currentUserLogged.name;
+      const loggedUserEmail = await context.currentUserLogged.email;
 
-      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail })
-      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, ownerID, ownerName, ownerEmail })
+      const buyerID = String(loggedUserID);
+      const buyerName = loggedUserName;
+      const buyerEmail = loggedUserEmail;
+
+      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail })
+      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, buyerID, buyerName, buyerEmail })
 
       try {
         const saveTransactionBuyer = await transactionBuyer.save()
         const saveTransactionSeller = await transactionSeller.save()
 
-        const getBuyerData = await Users.findById(String(loggedUserID))
+        const getBuyerData = await Users.findById(buyerID)
         getBuyerData.transactions.push(transactionBuyer)
         await getBuyerData.save()
 
-        const getSellerData = await Users.findById(ownerID)
+        const getSellerData = await Users.findById(sellerID)
         getSellerData.transactions.push(transactionSeller)
         await getSellerData.save()
 

@@ -33,15 +33,29 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  ownerID: {
+  sellerID: {
+    type: String,
+  },
+  sellerName: {
+    type: String,
+  },
+  sellerEmail: {
+    type: String,
+  },
+  buyerID: {
+    type: String,
+  },
+  buyerName: {
+    type: String,
+  },
+  buyerEmail: {
+    type: String,
+  },
+  shippingMethod: {
     type: String,
     required: true,
   },
-  ownerName: {
-    type: String,
-    required: true,
-  },
-  ownerEmail: {
+  paymentMethod: {
     type: String,
     required: true,
   },
