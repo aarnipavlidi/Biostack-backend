@@ -71,9 +71,15 @@ const typeDefs = gql`
     productSize: String!
     productPrice: String!
     productGroupName: String!
-    ownerID: String!
-    ownerName: String!
-    ownerEmail: String!
+    sellerID: String
+    sellerName: String
+    sellerEmail: String
+    buyerID: String
+    buyerName: String
+    buyerEmail: String
+    shippingMethod: String!
+    paymentMethod: String!
+    paymentTotal: String!
   }
 
   type Token {
@@ -110,9 +116,12 @@ const typeDefs = gql`
       productSize: String!
       productPrice: String!
       productGroupName: String!
-      ownerID: String!
-      ownerName: String!
-      ownerEmail: String!
+      sellerID: String!
+      sellerName: String!
+      sellerEmail: String!
+      shippingMethod: String!
+      paymentMethod: String!
+      paymentTotal: String!
     ): Transaction!
 
     deleteProduct(
@@ -248,7 +257,7 @@ const resolvers = {
       }
     },
 
-    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail }, context) => {
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
 
       const loggedUserID = await context.currentUserLogged._id;
       const loggedUserName = await context.currentUserLogged.name;
@@ -258,8 +267,8 @@ const resolvers = {
       const buyerName = loggedUserName;
       const buyerEmail = loggedUserEmail;
 
-      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail })
-      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, buyerID, buyerName, buyerEmail })
+      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
 
       try {
         const saveTransactionBuyer = await transactionBuyer.save()

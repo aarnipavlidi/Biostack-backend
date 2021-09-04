@@ -59,6 +59,10 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  paymentTotal: {
+    type: String,
+    required: true,
+  },
 })
 
 schema.plugin(uniqueValidator)
