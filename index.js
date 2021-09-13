@@ -35,9 +35,24 @@ mongoose.connect(database, { useNewUrlParser: true, useUnifiedTopology: true, us
 // Alustetaan muuttuja "typeDefs", joka sisältää sovelluksen käyttämän GraphQL-skeeman. Lisää tästä löytyy: https://graphql.org/learn/schema/
 const typeDefs = gql`
 
+  type ProductConnection {
+    edges: [ProductEdge]
+    pageInfo: PageInfo
+  }
+
+  type ProductEdge {
+    cursor: ID!,
+    node: Product
+  }
+
+  type PageInfo {
+    endCursor: ID!,
+    hasNextPage: Boolean!,
+  }
+
   type Query {
     showAllUsers: [User!]!
-    showAllProducts: [Product!]!
+    showAllProducts(first: Int!, cursor: ID): ProductConnection
     showCurrentProduct(productID: String): Product!
     me: User
   }
@@ -190,16 +205,30 @@ const resolvers = {
         throw error
       }
     },
-    showAllProducts: async () => {
-      try {
-        const getAllProducts = await Products.find()
-        return getAllProducts.map(results => ({
-          ...results._doc,
-          owner: usersRelation.bind(this, results._doc.owner)
-        }))
-      } catch (error) {
-        throw error
-      }
+
+    showAllProducts: async (_, { first, cursor }) => {
+
+      const getAllProducts = await Products.find()
+
+      const cursorIndex = !cursor
+        ? 0
+        : getAllProducts.findIndex(results => String(results._id) === cursor) + 1;
+
+      const sliceOfProducts = getAllProducts.slice(cursorIndex, cursorIndex + first);
+
+      return {
+        edges: sliceOfProducts.map(results => ({
+          cursor: results._id,
+          node: {
+            ...results._doc,
+            owner: usersRelation.bind(this, results._doc.owner)
+          },
+        })),
+        pageInfo: {
+          endCursor: sliceOfProducts[sliceOfProducts.length - 1]._id,
+          hasNextPage: cursorIndex + first < getAllProducts.length,
+        },
+      };
     },
 
     showCurrentProduct: async (_, { productID }) => {
