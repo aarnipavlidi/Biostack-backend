@@ -52,7 +52,7 @@ const typeDefs = gql`
 
   type Query {
     showAllUsers: [User!]!
-    showAllProducts(first: Int!, cursor: ID): ProductConnection
+    showAllProducts(first: Int!, cursor: ID, search: String): ProductConnection
     showCurrentProduct(productID: String): Product!
     me: User
   }
@@ -206,9 +206,9 @@ const resolvers = {
       }
     },
 
-    showAllProducts: async (_, { first, cursor }) => {
-
-      const getAllProducts = await Products.find()
+    showAllProducts: async (_, { first, cursor, search }) => {
+      
+      const getAllProducts = await Products.find({ productTitle: { $regex: search, $options: 'i' } });
 
       const cursorIndex = !cursor
         ? 0
