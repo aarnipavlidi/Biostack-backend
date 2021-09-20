@@ -143,6 +143,8 @@ const typeDefs = gql`
       currentProductID: String!
     ): Response
 
+    deleteManyProduct: Response
+
     login(
       username: String!
       password: String!
@@ -207,7 +209,7 @@ const resolvers = {
     },
 
     showAllProducts: async (_, { first, cursor, search }) => {
-      
+
       const getAllProducts = await Products.find({ productTitle: { $regex: search, $options: 'i' } });
 
       const cursorIndex = !cursor
@@ -340,6 +342,26 @@ const resolvers = {
       } else {
         throw new UserInputError('You are either not authorized to delete current item from the app or it has been already deleted!');
       }
+    },
+
+    deleteManyProduct: async (root, args, context) => {
+      try {
+        const loggedUserID = await context.currentUserLogged._id;
+        const countUserProducts = await Products.collection.find({ "owner": mongoose.Types.ObjectId(loggedUserID)}).count();
+
+        if (loggedUserID && countUserProducts === 0) {
+          throw new Error('You do not have currently any products listed on the app!')
+        } else {
+          const deleteUserProducts = await Products.collection.deleteMany({ "owner": mongoose.Types.ObjectId(loggedUserID)});
+          return {
+            response: "You have successfully deleted all of your listed products from the app!"
+          };
+        };
+      } catch (error) {
+        return {
+          response: error.message
+        };
+      };
     },
 
     login: async (root, args) => {
