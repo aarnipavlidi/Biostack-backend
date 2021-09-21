@@ -46,7 +46,7 @@ const typeDefs = gql`
   }
 
   type PageInfo {
-    endCursor: ID!,
+    endCursor: ID,
     hasNextPage: Boolean!,
   }
 
@@ -227,7 +227,7 @@ const resolvers = {
           },
         })),
         pageInfo: {
-          endCursor: sliceOfProducts[sliceOfProducts.length - 1]._id,
+          endCursor: sliceOfProducts[sliceOfProducts.length - 1]?._id,
           hasNextPage: cursorIndex + first < getAllProducts.length,
         },
       };
@@ -347,6 +347,7 @@ const resolvers = {
     deleteManyProduct: async (root, args, context) => {
       try {
         const loggedUserID = await context.currentUserLogged._id;
+
         const countUserProducts = await Products.collection.find({ "owner": mongoose.Types.ObjectId(loggedUserID)}).count();
 
         if (loggedUserID && countUserProducts === 0) {
@@ -355,13 +356,13 @@ const resolvers = {
           const deleteUserProducts = await Products.collection.deleteMany({ "owner": mongoose.Types.ObjectId(loggedUserID)});
           return {
             response: "You have successfully deleted all of your listed products from the app!"
-          };
-        };
+          }
+        }
       } catch (error) {
         return {
           response: error.message
-        };
-      };
+        }
+      }
     },
 
     login: async (root, args) => {
