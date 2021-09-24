@@ -115,6 +115,11 @@ const typeDefs = gql`
       rating: String
     ): User!
 
+    updateUser(
+      newUserNameValue: String
+      newUserEmailValue: String
+    ): Response
+
     createProduct(
       productTitle: String!
       productDescription: String!
@@ -270,6 +275,36 @@ const resolvers = {
         throw error
       }
     },
+
+    updateUser: async (_, { newUserNameValue, newUserEmailValue }, context) => {
+
+      const loggedUserID = await context.currentUserLogged?._id === undefined
+        ? null
+        : context.currentUserLogged._id;
+
+      try {
+        const findCurrentUser = {"_id": mongoose.Types.ObjectId(loggedUserID)};
+        const updateCurrentUser = newUserNameValue && newUserEmailValue
+          ? { $set: { 'name': newUserNameValue, "email": newUserEmailValue }}
+          : !newUserEmailValue
+          ? { $set: { 'name': newUserNameValue }}
+          : { $set: { 'email': newUserEmailValue }};
+
+        if (!loggedUserID) {
+          throw new Error('Could not update current value. You either not authorized or user does not exist!')
+        } else {
+          const updatedUser = await Users.collection.findOneAndUpdate(findCurrentUser, updateCurrentUser);
+          return {
+            response: "You have successfully updated your account information into new value!"
+          };
+        };
+      } catch (error) {
+        return {
+          response: error.message
+        };
+      };
+    },
+
     createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID }) => {
 
       const newProduct = new Products({ productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID })
