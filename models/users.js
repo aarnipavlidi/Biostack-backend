@@ -17,7 +17,6 @@ const schema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
   },
   email: {
     type: String,
@@ -28,6 +27,10 @@ const schema = new mongoose.Schema({
   rating: {
     type: String,
     default: "0"
+  },
+  facebookID: {
+    type: String,
+    unique: true
   },
   products: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -40,5 +43,4 @@ const schema = new mongoose.Schema({
 })
 
 schema.plugin(uniqueValidator)
-
 module.exports = mongoose.model('Users', schema)

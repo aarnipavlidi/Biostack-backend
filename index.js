@@ -155,6 +155,13 @@ const typeDefs = gql`
       password: String!
     ): Token
 
+    facebookLogin(
+      getFacebookID: String!
+      getFacebookEmail: String!
+      getFacebookName: String!
+      getFacebookUsername: String!
+    ): Token
+
     deleteUser(
       id: String!
     ): Response
@@ -416,6 +423,40 @@ const resolvers = {
         const tokenForUser = {
           username: findCurrentUsername.username,
           id: findCurrentUsername._id
+        };
+
+        return {
+          value: jwt.sign(tokenForUser, JWT_SECRET)
+        }
+      }
+    },
+
+    facebookLogin: async (_, { getFacebookID, getFacebookEmail, getFacebookName, getFacebookUsername }) => {
+
+      const name = getFacebookName;
+      const username = getFacebookUsername;
+      const email = getFacebookEmail;
+      const facebookID = getFacebookID;
+
+      const findFacebookUsername = await Users.findOne({ facebookID: facebookID });
+
+      if (!findFacebookUsername) {
+        const newFacebookUser = new Users({ name, username, email, facebookID });
+        await newFacebookUser.save();
+
+        const tokenForUser = {
+          username: newFacebookUser.username,
+          id: newFacebookUser._id
+        };
+
+        return {
+          value: jwt.sign(tokenForUser, JWT_SECRET)
+        }
+      } else {
+
+        const tokenForUser = {
+          username: findFacebookUsername.username,
+          id: findFacebookUsername._id
         };
 
         return {
