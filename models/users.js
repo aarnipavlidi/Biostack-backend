@@ -30,7 +30,11 @@ const schema = new mongoose.Schema({
   },
   facebookID: {
     type: String,
-    unique: true
+    unique: true,
+  },
+  facebookAvatar: {
+    type: String,
+    unique: true,
   },
   products: [{
     type: mongoose.Schema.Types.ObjectId,

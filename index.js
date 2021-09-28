@@ -63,6 +63,7 @@ const typeDefs = gql`
     username: String!
     email: String!
     rating: String
+    facebookAvatar: String
     products: [Product!]
     transactions: [Transaction!]
   }
@@ -157,6 +158,7 @@ const typeDefs = gql`
 
     facebookLogin(
       getFacebookID: String!
+      getFacebookAvatar: String!
       getFacebookEmail: String!
       getFacebookName: String!
       getFacebookUsername: String!
@@ -165,7 +167,6 @@ const typeDefs = gql`
     deleteUser(
       id: String!
     ): Response
-
   }
 `
 
@@ -431,17 +432,18 @@ const resolvers = {
       }
     },
 
-    facebookLogin: async (_, { getFacebookID, getFacebookEmail, getFacebookName, getFacebookUsername }) => {
+    facebookLogin: async (_, { getFacebookID, getFacebookAvatar, getFacebookEmail, getFacebookName, getFacebookUsername }) => {
 
       const name = getFacebookName;
       const username = getFacebookUsername;
       const email = getFacebookEmail;
       const facebookID = getFacebookID;
+      const facebookAvatar = getFacebookAvatar;
 
       const findFacebookUsername = await Users.findOne({ facebookID: facebookID });
 
       if (!findFacebookUsername) {
-        const newFacebookUser = new Users({ name, username, email, facebookID });
+        const newFacebookUser = new Users({ name, username, email, facebookID, facebookAvatar });
         await newFacebookUser.save();
 
         const tokenForUser = {
