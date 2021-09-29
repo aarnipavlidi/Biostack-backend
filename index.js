@@ -68,6 +68,11 @@ const typeDefs = gql`
     transactions: [Transaction!]
   }
 
+  type ProductImage {
+    name: String!
+    value: Int!
+  }
+
   type Product {
     _id: ID!
     productTitle: String!
@@ -75,6 +80,7 @@ const typeDefs = gql`
     productSize: String!
     productPrice: String!
     productGroupName: String!
+    productImage: ProductImage!
     owner: User!
   }
 
@@ -127,6 +133,7 @@ const typeDefs = gql`
       productSize: String!
       productPrice: String!
       productGroupName: String!
+      productImageValue: Int!
       owner: String!
     ): Product!
 
@@ -313,9 +320,20 @@ const resolvers = {
       };
     },
 
-    createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID }) => {
+    createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productGroupName, productImageValue, owner: currentUserID }) => {
 
-      const newProduct = new Products({ productTitle, productDescription, productSize, productPrice, productGroupName, owner: currentUserID })
+      const newProduct = new Products({
+        productTitle,
+        productDescription,
+        productSize,
+        productPrice,
+        productGroupName,
+        productImage: {
+          name: productGroupName,
+          value: productImageValue
+        },
+        owner: currentUserID
+      });
 
       try {
         const savedProduct = await newProduct.save()

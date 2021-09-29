@@ -30,6 +30,16 @@ const schema = new mongoose.Schema({
     type: String,
     required: true
   },
+  productImage: {
+    name: {
+      type: String,
+      required: true
+    },
+    value: {
+      type: Number,
+      required: true
+    },
+  },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Users'
