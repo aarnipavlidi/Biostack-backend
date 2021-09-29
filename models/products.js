@@ -26,10 +26,6 @@ const schema = new mongoose.Schema({
     required: true,
     minlength: 1
   },
-  productGroupName: {
-    type: String,
-    required: true
-  },
   productImage: {
     name: {
       type: String,

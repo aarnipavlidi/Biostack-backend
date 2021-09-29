@@ -79,7 +79,6 @@ const typeDefs = gql`
     productDescription: String!
     productSize: String!
     productPrice: String!
-    productGroupName: String!
     productImage: ProductImage!
     owner: User!
   }
@@ -92,7 +91,7 @@ const typeDefs = gql`
     productTitle: String!
     productSize: String!
     productPrice: String!
-    productGroupName: String!
+    productType: String!
     sellerID: String
     sellerName: String
     sellerEmail: String
@@ -132,7 +131,7 @@ const typeDefs = gql`
       productDescription: String!
       productSize: String!
       productPrice: String!
-      productGroupName: String!
+      productType: String!
       productImageValue: Int!
       owner: String!
     ): Product!
@@ -143,7 +142,7 @@ const typeDefs = gql`
       productTitle: String!
       productSize: String!
       productPrice: String!
-      productGroupName: String!
+      productType: String!
       sellerID: String!
       sellerName: String!
       sellerEmail: String!
@@ -320,16 +319,15 @@ const resolvers = {
       };
     },
 
-    createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productGroupName, productImageValue, owner: currentUserID }) => {
+    createProduct: async (_, { productTitle, productDescription, productSize, productPrice, productType, productImageValue, owner: currentUserID }) => {
 
       const newProduct = new Products({
         productTitle,
         productDescription,
         productSize,
         productPrice,
-        productGroupName,
         productImage: {
-          name: productGroupName,
+          name: productType,
           value: productImageValue
         },
         owner: currentUserID
@@ -349,7 +347,7 @@ const resolvers = {
       }
     },
 
-    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productType, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
 
       const loggedUserID = await context.currentUserLogged._id;
       const loggedUserName = await context.currentUserLogged.name;
@@ -359,8 +357,8 @@ const resolvers = {
       const buyerName = loggedUserName;
       const buyerEmail = loggedUserEmail;
 
-      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productGroupName, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
-      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productGroupName, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productType, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productType, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
 
       try {
         const saveTransactionBuyer = await transactionBuyer.save()
