@@ -28,6 +28,24 @@ const schema = new mongoose.Schema({
     type: String,
     default: "0"
   },
+  location: {
+    city: {
+      type: String,
+      default: "Helsinki",
+    },
+    region_id: {
+      type: Number,
+      default: 4978
+    },
+    latitude: {
+      type: mongoose.Types.Decimal128,
+      default: 60.1708,
+    },
+    longitude: {
+      type: mongoose.Types.Decimal128,
+      default: 24.9375,
+    },
+  },
   facebookID: {
     type: String,
     unique: true,

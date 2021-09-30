@@ -168,6 +168,10 @@ const typeDefs = gql`
       getFacebookEmail: String!
       getFacebookName: String!
       getFacebookUsername: String!
+      getFacebookCity: String!
+      getFacebookRegionID: Int!
+      getFacebookLatitude: Float!
+      getFacebookLongitude: Float!
     ): Token
 
     deleteUser(
@@ -448,18 +452,25 @@ const resolvers = {
       }
     },
 
-    facebookLogin: async (_, { getFacebookID, getFacebookAvatar, getFacebookEmail, getFacebookName, getFacebookUsername }) => {
+    facebookLogin: async (_, { getFacebookID, getFacebookAvatar, getFacebookEmail, getFacebookName, getFacebookUsername, getFacebookCity, getFacebookRegionID, getFacebookLatitude, getFacebookLongitude }) => {
 
-      const name = getFacebookName;
-      const username = getFacebookUsername;
-      const email = getFacebookEmail;
-      const facebookID = getFacebookID;
-      const facebookAvatar = getFacebookAvatar;
-
-      const findFacebookUsername = await Users.findOne({ facebookID: facebookID });
+      const findFacebookUsername = await Users.findOne({ facebookID: getFacebookID });
 
       if (!findFacebookUsername) {
-        const newFacebookUser = new Users({ name, username, email, facebookID, facebookAvatar });
+        const newFacebookUser = new Users({
+          name: getFacebookName,
+          username: getFacebookUsername,
+          email: getFacebookEmail,
+          location: {
+            city: getFacebookCity,
+            region_id: getFacebookRegionID,
+            latitude: getFacebookLatitude,
+            longitude: getFacebookLongitude,
+          },
+          facebookID: getFacebookID,
+          facebookAvatar: getFacebookAvatar
+        });
+
         await newFacebookUser.save();
 
         const tokenForUser = {
