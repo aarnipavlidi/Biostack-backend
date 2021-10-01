@@ -54,6 +54,7 @@ const typeDefs = gql`
     showAllUsers: [User!]!
     showAllProducts(first: Int!, cursor: ID, search: String): ProductConnection
     showCurrentProduct(productID: String): Product!
+    showCurrentTransaction(getTransactionID: String): Transaction
     me: User
   }
 
@@ -262,6 +263,21 @@ const resolvers = {
         return {
           ...getCurrentProduct._doc,
           owner: usersRelation.bind(this, getCurrentProduct._doc.owner)
+        }
+      } catch (error) {
+        throw error
+      }
+    },
+
+    showCurrentTransaction: async (_, { getTransactionID }) => {
+      try {
+        if (getTransactionID) {
+          const getCurrentTransaction = await Transactions.findById(getTransactionID);
+          return {
+            ...getCurrentTransaction._doc
+          }
+        } else {
+          return null
         }
       } catch (error) {
         throw error
