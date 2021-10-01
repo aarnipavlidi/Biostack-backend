@@ -93,6 +93,7 @@ const typeDefs = gql`
     productSize: String!
     productPrice: String!
     productType: String!
+    productImage: Int!
     sellerID: String
     sellerName: String
     sellerEmail: String
@@ -144,6 +145,7 @@ const typeDefs = gql`
       productSize: String!
       productPrice: String!
       productType: String!
+      productImage: Int!
       sellerID: String!
       sellerName: String!
       sellerEmail: String!
@@ -367,7 +369,7 @@ const resolvers = {
       }
     },
 
-    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productType, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productType, productImage, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
 
       const loggedUserID = await context.currentUserLogged._id;
       const loggedUserName = await context.currentUserLogged.name;
@@ -377,8 +379,8 @@ const resolvers = {
       const buyerName = loggedUserName;
       const buyerEmail = loggedUserEmail;
 
-      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productType, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
-      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productType, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productType, productImage, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productType, productImage, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
 
       try {
         const saveTransactionBuyer = await transactionBuyer.save()

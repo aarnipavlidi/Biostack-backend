@@ -33,6 +33,10 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  productImage: {
+    type: Number,
+    required: true,
+  },
   sellerID: {
     type: String,
   },
