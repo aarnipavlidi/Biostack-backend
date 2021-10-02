@@ -9,6 +9,14 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  ratingStatus: {
+    type: Boolean,
+    default: false,
+  },
+  ratingValue: {
+    type: Number,
+    default: 0,
+  },
   type: {
     type: String,
     required: true,

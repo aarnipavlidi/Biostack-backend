@@ -87,6 +87,8 @@ const typeDefs = gql`
   type Transaction {
     _id: ID!
     date: String!
+    ratingStatus: Boolean!
+    ratingValue: Int!
     type: String!
     productID: String!
     productTitle: String!
@@ -153,6 +155,12 @@ const typeDefs = gql`
       paymentMethod: String!
       paymentTotal: String!
     ): Transaction!
+
+    giveRatingUser(
+      currentTransactionID: String!
+      getRatingValue: Int!
+      getTransactionType: String!
+    ): Response
 
     deleteProduct(
       currentProductID: String!
@@ -402,6 +410,38 @@ const resolvers = {
       } catch (error) {
         throw error
       }
+    },
+
+    giveRatingUser: async (_, { currentTransactionID, getRatingValue, getTransactionType }, context) => {
+
+      const getUserRole = getTransactionType === "Purchased" ? "buyer" : "seller";
+
+      const loggedUserID = await context.currentUserLogged?._id === undefined
+        ? null
+        : context.currentUserLogged._id;
+
+      try {
+        if (!loggedUserID) {
+          throw new Error('You are not authorized to give rating to the user. Please log in and try again!')
+        } else {
+          const findCurrentTransaction = {"_id": mongoose.Types.ObjectId(currentTransactionID)};
+          const updateCurrentTransaction = {
+            $set: {
+              "ratingStatus": true,
+              "ratingValue": getRatingValue
+            }
+          };
+
+          const getTransactionForUpdate = await Transactions.findOneAndUpdate(findCurrentTransaction, updateCurrentTransaction)
+          return {
+            response: `You have successfully given rating to the product ${getUserRole}. Thank you for giving feedback! <3`
+          };
+        };
+      } catch (error) {
+        return {
+          response: error.message
+        };
+      };
     },
 
     deleteProduct: async (root, args, context) => {
