@@ -58,12 +58,20 @@ const typeDefs = gql`
     me: User
   }
 
+  type UserLocation {
+    city: String!
+    region_id: Int!
+    latitude: String!
+    longitude: String!
+  }
+
   type User {
     _id: ID!
     name: String!
     username: String!
     email: String!
     rating: String
+    location: UserLocation!
     facebookAvatar: String
     products: [Product!]
     transactions: [Transaction!]
@@ -219,6 +227,12 @@ const usersRelation = async (getUserID) => {
     const findUsers = await Users.findById(getUserID)
     return {
       ...findUsers._doc,
+      location: {
+        city: findUsers.location.city,
+        region_id: findUsers.location.region_id,
+        latitude: findUsers.location.latitude.toString(),
+        longitude: findUsers.location.longitude.toString(),
+      },
       products: productsRelation.bind(this, findUsers._doc.products)
     }
   } catch (error) {
@@ -414,8 +428,7 @@ const resolvers = {
 
     giveRatingUser: async (_, { currentTransactionID, getRatingValue, getTransactionType }, context) => {
 
-      const getUserRole = getTransactionType === "Purchased" ? "buyer" : "seller";
-
+      const getUserRole = getTransactionType === "Purchased" ? "seller" : "buyer";
       const loggedUserID = await context.currentUserLogged?._id === undefined
         ? null
         : context.currentUserLogged._id;

@@ -16,6 +16,8 @@ const schema = new mongoose.Schema({
   ratingValue: {
     type: Number,
     default: 0,
+    min: 0,
+    max: 3,
   },
   type: {
     type: String,
