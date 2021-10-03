@@ -65,6 +65,24 @@ const schema = new mongoose.Schema({
   buyerEmail: {
     type: String,
   },
+  location: {
+    city: {
+      type: String,
+      required: true,
+    },
+    region_id: {
+      type: Number,
+      required: true,
+    },
+    latitude: {
+      type: String,
+      required: true,
+    },
+    longitude: {
+      type: String,
+      required: true,
+    },
+  },
   shippingMethod: {
     type: String,
     required: true,

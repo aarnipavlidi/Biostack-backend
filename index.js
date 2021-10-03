@@ -110,6 +110,7 @@ const typeDefs = gql`
     buyerID: String
     buyerName: String
     buyerEmail: String
+    location: UserLocation!
     shippingMethod: String!
     paymentMethod: String!
     paymentTotal: String!
@@ -159,6 +160,10 @@ const typeDefs = gql`
       sellerID: String!
       sellerName: String!
       sellerEmail: String!
+      sellerCity: String!
+      sellerRegionID: Int!,
+      sellerLatitude: String!,
+      sellerLongitude: String!,
       shippingMethod: String!
       paymentMethod: String!
       paymentTotal: String!
@@ -391,7 +396,7 @@ const resolvers = {
       }
     },
 
-    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productType, productImage, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal }, context) => {
+    createTransaction: async (_, { date, productID, productTitle, productSize, productPrice, productType, productImage, sellerID, sellerName, sellerEmail, sellerCity, sellerRegionID, sellerLatitude, sellerLongitude, shippingMethod, paymentMethod, paymentTotal }, context) => {
 
       const loggedUserID = await context.currentUserLogged._id;
       const loggedUserName = await context.currentUserLogged.name;
@@ -401,18 +406,62 @@ const resolvers = {
       const buyerName = loggedUserName;
       const buyerEmail = loggedUserEmail;
 
-      const transactionBuyer = new Transactions({ date, type: "Purchased", productID, productTitle, productSize, productPrice, productType, productImage, sellerID, sellerName, sellerEmail, shippingMethod, paymentMethod, paymentTotal })
-      const transactionSeller = new Transactions({ date, type: "Sold", productID, productTitle, productSize, productPrice, productType, productImage, buyerID, buyerName, buyerEmail, shippingMethod, paymentMethod, paymentTotal })
+      const getBuyerData = await Users.findById(buyerID)
+      const getSellerData = await Users.findById(sellerID)
+
+      const transactionBuyer = new Transactions({
+        date,
+        type: "Purchased",
+        productID,
+        productTitle,
+        productSize,
+        productPrice,
+        productType,
+        productImage,
+        sellerID,
+        sellerName,
+        sellerEmail,
+        location: {
+          city: sellerCity,
+          region_id: sellerRegionID,
+          latitude: sellerLatitude,
+          longitude: sellerLongitude,
+        },
+        shippingMethod,
+        paymentMethod,
+        paymentTotal
+      });
+
+      const transactionSeller = new Transactions({
+        date,
+        type: "Sold",
+        productID,
+        productTitle,
+        productSize,
+        productPrice,
+        productType,
+        productImage,
+        buyerID,
+        buyerName,
+        buyerEmail,
+        location: {
+          city: getBuyerData.location.city,
+          region_id: getBuyerData.location.region_id,
+          latitude: getBuyerData.location.latitude.toString(),
+          longitude: getBuyerData.location.longitude.toString(),
+        },
+        shippingMethod,
+        paymentMethod,
+        paymentTotal
+      });
 
       try {
         const saveTransactionBuyer = await transactionBuyer.save()
         const saveTransactionSeller = await transactionSeller.save()
 
-        const getBuyerData = await Users.findById(buyerID)
         getBuyerData.transactions.push(transactionBuyer)
         await getBuyerData.save()
 
-        const getSellerData = await Users.findById(sellerID)
         getSellerData.transactions.push(transactionSeller)
         await getSellerData.save()
 
