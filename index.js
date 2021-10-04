@@ -3,6 +3,8 @@
 
 require('dotenv').config() // Sovellus ottaa käyttöön "dotenv" kirjaston, jotta voidaan tuoda erilaisia muuttujia => ".env" tiedostosta.
 const { ApolloServer, UserInputError, gql } = require('apollo-server') // Alustetaan muuttujat "ApolloServer", "UserInputError" sekä "gql", jotka hyödyntävät "apollo-server":in kirjastoa sovelluksessa.
+const { PubSub } = require('graphql-subscriptions')
+const pubsub = new PubSub()
 
 const mongoose = require('mongoose') // Alustetetaan muuttuja "mongoose", joka ottaa käyttöönsä "mongoose" nimisen kirjaston sovellusta varten.
 const { v4: uuid } = require('uuid') // Alustetaan muuttuja "uuid", joka hyödyntää "uuid" nimistä kirjastoa. Tämän avulla voidaan lisätä "random" id:n arvo, kun esim. halutaan lisätä uusi arvo tietokantaan.
@@ -202,6 +204,10 @@ const typeDefs = gql`
       id: String!
     ): Response
   }
+
+  type Subscription {
+    productAdded: Product!
+  }
 `
 
 const transactionsRelation = async (getTransactionID) => {
@@ -387,10 +393,14 @@ const resolvers = {
         const currentUserData = await Users.findById(currentUserID)
         currentUserData.products.push(newProduct)
         await currentUserData.save()
-        return {
+
+        const returnNewProduct = {
           ...savedProduct._doc,
           owner: usersRelation.bind(this, currentUserID)
         }
+
+        pubsub.publish('PRODUCT_ADDED', { productAdded: returnNewProduct })
+        return returnNewProduct
       } catch (error) {
         throw error
       }
@@ -636,6 +646,11 @@ const resolvers = {
         throw new UserInputError('You tried to delete user, which does not exist on database or you are not authorized to do so. Please try again!');
       }
     }
+  },
+  Subscription: {
+    productAdded: {
+      subscribe: () => pubsub.asyncIterator(['PRODUCT_ADDED'])
+    }
   }
 }
 
@@ -659,6 +674,9 @@ const server = new ApolloServer({
   }
 })
 
-server.listen().then(({ url }) => { // Luo serverin portille 4000, jonka jälkeen tulostaa terminaaliin alla olevan tekstin takaisin käyttäjälle näkyviin.
-  console.log(`Server ready at ${url}`)
+// Luo serverin portille 4000, jonka jälkeen tulostaa terminaaliin alla olevan tekstin takaisin käyttäjälle näkyviin.
+// Muuttujan "subscriptionsUrl" avulla palvelin kuuntelee subscriptioneita osoitteesssa => "localhost:4000/graphql".
+server.listen().then(({ url, subscriptionsUrl }) => {
+  console.log(`Server ready at ${url}`) // Tulostaa kyseisen tekstin näkyviin terminaaliin.
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`) // Tulostaa kyseisen tekstin näkyviin terminaaliin.
 })
