@@ -207,6 +207,7 @@ const typeDefs = gql`
 
   type Subscription {
     productAdded: Product!
+    productPurchased: String!
   }
 `
 
@@ -477,6 +478,7 @@ const resolvers = {
 
         await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(productID)})
 
+        pubsub.publish('PRODUCT_PURCHASED', { productPurchased: productID })
         return {
           ...saveTransactionBuyer._doc
         }
@@ -650,7 +652,10 @@ const resolvers = {
   Subscription: {
     productAdded: {
       subscribe: () => pubsub.asyncIterator(['PRODUCT_ADDED'])
-    }
+    },
+    productPurchased: {
+      subscribe: () => pubsub.asyncIterator(['PRODUCT_PURCHASED'])
+    },
   }
 }
 
