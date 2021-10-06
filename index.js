@@ -206,8 +206,10 @@ const typeDefs = gql`
   }
 
   type Subscription {
-    productAdded: Product!
+    productAdded: String!
     productPurchased: String!
+    productDeleted: String!
+    productDeletedMany: String!
   }
 `
 
@@ -400,7 +402,7 @@ const resolvers = {
           owner: usersRelation.bind(this, currentUserID)
         }
 
-        pubsub.publish('PRODUCT_ADDED', { productAdded: returnNewProduct })
+        pubsub.publish('PRODUCT_ADDED', { productAdded: "User has successfully added new product to the app!" })
         return returnNewProduct
       } catch (error) {
         throw error
@@ -478,7 +480,7 @@ const resolvers = {
 
         await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(productID)})
 
-        pubsub.publish('PRODUCT_PURCHASED', { productPurchased: productID })
+        pubsub.publish('PRODUCT_PURCHASED', { productPurchased: "User has successfully purchased product from the app!" })
         return {
           ...saveTransactionBuyer._doc
         }
@@ -531,6 +533,8 @@ const resolvers = {
       if (findCurrentProduct && String(loggedUserID) === String(mongoose.Types.ObjectId(findCurrentProduct.owner))) {
         await Products.collection.deleteOne({"_id": mongoose.Types.ObjectId(args.currentProductID)});
 
+        pubsub.publish('PRODUCT_DELETED', { productDeleted: "User has successfully deleted product from the app!" })
+
         return {
           response: `You have successfully deleted your product called "${findCurrentProduct.productTitle}" from the app!`
         }
@@ -549,6 +553,7 @@ const resolvers = {
           throw new Error('You do not have currently any products listed on the app!')
         } else {
           const deleteUserProducts = await Products.collection.deleteMany({ "owner": mongoose.Types.ObjectId(loggedUserID)});
+          pubsub.publish('PRODUCT_DELETED_MANY', { productDeletedMany: "User has successfully deleted all products from the app!" })
           return {
             response: "You have successfully deleted all of your listed products from the app!"
           }
@@ -641,6 +646,8 @@ const resolvers = {
         await Products.collection.deleteMany({ owner: { $in: objects }});
         await Users.findByIdAndRemove(args.id).exec();
 
+        pubsub.publish('PRODUCT_DELETED_MANY', { productDeletedMany: "User has successfully deleted all products from the app!" })
+
         return {
           response: `You successfully deleted your account from app. Thank you ${loggedUserName} for using our app and we hope you come back again some day! <3`
         }
@@ -656,6 +663,12 @@ const resolvers = {
     productPurchased: {
       subscribe: () => pubsub.asyncIterator(['PRODUCT_PURCHASED'])
     },
+    productDeleted: {
+      subscribe: () => pubsub.asyncIterator(['PRODUCT_DELETED'])
+    },
+    productDeletedMany: {
+      subscribe: () => pubsub.asyncIterator(['PRODUCT_DELETED_MANY'])
+    }
   }
 }
 
